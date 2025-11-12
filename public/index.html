@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Legend Cyber Analyzer</title>
+  <meta name="description" content="Legend Cyber Analyzer — quick domain, IP and username analysis with AI-assisted risk scoring">
+  <style>
+    /* ====== Cyber dark theme (responsive) ====== */
+    :root{
+      --bg:#070712; --panel:#0f1720; --accent:#00e6a8; --muted:#94a3b8; --danger:#ff5874; --glass: rgba(255,255,255,0.03);
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background: radial-gradient(1000px 500px at 10% 10%, rgba(0,230,168,0.03), transparent), var(--bg); color:#dbeafe;}
+    .container{max-width:1000px;margin:28px auto;padding:20px}
+    header{display:flex;gap:16px;align-items:center}
+    .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#061220,#09202f);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 24px rgba(0,0,0,.6)}
+    .logo svg{filter:drop-shadow(0 4px 16px rgba(0,0,0,.6))}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:4px 0 0;color:var(--muted)}
+
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:14px;padding:16px;box-shadow:0 8px 30px rgba(2,6,23,.6); border:1px solid rgba(255,255,255,0.03);}
+
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:16px;margin-top:18px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}.container{padding:12px}}
+
+    .input-row{display:flex;gap:8px}
+    input[type=text]{flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:inherit;font-size:14px}
+    select{padding:12px;border-radius:10px;background:var(--panel);color:inherit;border:1px solid rgba(255,255,255,0.03)}
+    button.primary{background:linear-gradient(90deg,var(--accent),#00bfa0);border:none;padding:12px 14px;border-radius:10px;color:#021018;font-weight:600}
+    button.ghost{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.03);padding:10px 12px;border-radius:10px}
+
+    .results{margin-top:12px;display:flex;flex-direction:column;gap:12px}
+    .row{display:flex;gap:12px;align-items:center}
+    .pill{padding:6px 10px;border-radius:999px;background:var(--glass);font-size:13px;color:var(--muted)}
+
+    pre{white-space:pre-wrap;background:rgba(0,0,0,0.2);padding:12px;border-radius:8px;overflow:auto}
+
+    .score{font-size:36px;font-weight:700;color:var(--accent)}
+    .risk-low{color:#7af3b7}
+    .risk-med{color:#ffd166}
+    .risk-high{color:var(--danger)}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px}
+
+    /* small helper */
+    .muted{color:var(--muted)}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace}
+
+    /* modal */
+    .modal { position: fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(0,0,0,0.6); z-index:1000; }
+    .modal .box { background: #071224; padding:20px; border-radius:12px; max-width:420px; width:90%; box-shadow:0 12px 40px rgba(0,0,0,.6); border:1px solid rgba(255,255,255,0.03); }
+    .cyber-btn { padding:10px 12px; border-radius:10px; cursor:pointer; border:none; background:linear-gradient(90deg,var(--accent),#00bfa0); color:#021018; font-weight:600; }
+    .cyber-ghost { background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo card" aria-hidden>
+        <!-- minimal cyber logo -->
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="4" stroke="url(#g)" stroke-width="1.2"/><path d="M7 12h10M12 7v10" stroke="#00e6a8" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <h1>Legend Cyber Analyzer</h1>
+        <p class="lead">Quick domain, IP &amp; username analysis — AI-assisted risk scoring and OSINT summary.</p>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="pill">Free</div>
+          <div class="pill">No signup</div>
+          <div class="pill">Privacy-first</div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div class="input-row">
+            <input id="targetInput" type="text" placeholder="Enter domain, IP, or username (e.g. example.com or 8.8.8.8 or alice)" />
+            <select id="typeSelect" title="type">
+              <option value="auto">Auto-detect</option>
+              <option value="domain">Domain</option>
+              <option value="ip">IP</option>
+              <option value="username">Username</option>
+            </select>
+            <button id="scanBtn" class="primary">Scan</button>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+            <button id="deepBtn" class="ghost">Run deep scan (Pro)</button>
+            <div class="muted" style="font-size:13px">No API key required for basic scan. Enable server for more reliable results.</div>
+          </div>
+
+          <div class="results" id="results"></div>
+        </div>
+      </div>
+
+      <aside class="card">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <div class="muted">Quick Tips</div>
+            <ul class="muted" style="padding-left:16px;margin:6px 0">
+              <li>Domains: try both root and www (example.com and www.example.com)</li>
+              <li>IPs: public IPv4 addresses are supported (e.g. 8.8.8.8)</li>
+              <li>Usernames: results depend on public availability</li>
+            </ul>
+          </div>
+
+          <div>
+            <div class="muted">How scoring works</div>
+            <p class="muted" style="margin:6px 0">A combined heuristic checks recorded data (RDAP, geo, open ports, reachable HTTPS) and optionally enhances analysis with AI when an API key is configured on the server.</p>
+          </div>
+
+          <div>
+            <div class="muted">Local logs</div>
+            <p class="muted" style="margin:6px 0">If you run the server, scans can be recorded to a local SQLite database (`visitors.db`) for analytics.</p>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button id="copyBtn" class="ghost">Copy last report</button>
+            <button id="clearBtn" class="ghost">Clear</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="card" style="margin-top:18px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <span class="muted">Built for <strong>Legend Cyber</strong> — version 1.0</span>
+      </div>
+      <div class="muted mono">Made with ♥ — local-first, privacy-aware</div>
+    </footer>
+  </div>
+
+  <!-- Pro Scan Modal -->
+  <div id="proModal" class="modal" aria-hidden="true">
+    <div class="box">
+      <h2 style="margin:0 0 8px;color:var(--accent)">Legend Cyber — Pro Scan</h2>
+      <p class="muted">Deep scan includes TCP port checks, Shodan enrichment (if enabled), and extended AI analysis. One-time pay to unlock this scan for a target.</p>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button id="stripePay" class="cyber-btn">Pay $1.99 (Stripe)</button>
+        <a id="paypalPay" href="https://www.paypal.me/yourname/2" target="_blank" class="cyber-ghost" style="display:inline-flex;align-items:center;padding:10px;border-radius:8px">PayPal</a>
+        <button id="closePro" class="cyber-ghost">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ======== Frontend logic (resilient & responsive) ======== */
+    const scanBtn = document.getElementById('scanBtn');
+    const deepBtn = document.getElementById('deepBtn');
+    const resultsEl = document.getElementById('results');
+    const targetInput = document.getElementById('targetInput');
+    const typeSelect = document.getElementById('typeSelect');
+    const copyBtn = document.getElementById('copyBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    let lastReport = null;
+
+    function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className=cls; if(text) e.textContent=text; return e }
+
+    function detectType(t){ t = t.trim(); if(/^https?:\/\//i.test(t)) t = t.replace(/^https?:\/\//i,''); if(/^\d+\.\d+\.\d+\.\d+$/.test(t)) return 'ip'; if(/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(t)) return 'domain'; return 'username' }
+
+    async function doScan(target, forcedType){
+      resultsEl.innerHTML = '';
+      const type = forcedType && forcedType!=='auto' ? forcedType : detectType(target);
+      const header = el('div','row');
+      header.appendChild(el('div','pill',type.toUpperCase()));
+      header.appendChild(el('div','mono',target));
+      resultsEl.appendChild(header);
+
+      const loader = el('div',null,'Running scan...'); loader.style.opacity=.8; resultsEl.appendChild(loader);
+
+      try{
+        // Prefer server-backed API (more reliable) — graceful fallback to client-only heuristics
+        const serverUrl = (location.origin && location.origin.startsWith('http')) ? location.origin : null;
+        let respData = null;
+
+        // Try server endpoint if available
+        if(serverUrl){
+          try{
+            const r = await fetch('/api/scan', {
+              method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({target,type})
+            });
+            if(r.ok){ respData = await r.json(); }
+          }catch(e){ console.warn('Server scan failed', e) }
+        }
+
+        // If no server result, run lightweight client-side checks
+        if(!respData){
+          respData = await clientSideScan(target, type);
+          respData._note = 'client-only scan (server not available)';
+        }
+
+        lastReport = respData;
+        renderReport(respData);
+      }catch(err){
+        resultsEl.appendChild(el('pre',null,'Error: '+err.message));
+      }
+    }
+
+    async function clientSideScan(target,type){
+      const out = {target,type,when:new Date().toISOString(),checks:{}};
+      if(type==='ip' || type==='domain'){
+        const lookupName = type==='ip' ? 'ip' : 'domain';
+        // RDAP lookup (public)
+        try{
+          const rdapUrl = type==='ip' ? `https://rdap.org/ip/${encodeURIComponent(target)}` : `https://rdap.org/domain/${encodeURIComponent(target)}`;
+          const r = await fetch(rdapUrl);
+          if(r.ok){ out.rdap = await r.json(); out.checks.rdap = true }
+        }catch(e){ out.checks.rdap = false }
+
+        // Basic HTTPS reachability check by attempting to fetch https://<domain>/
+        if(type==='domain'){
+          try{
+            const t0 = performance.now();
+            const r = await fetch('https://'+target, {method:'GET',mode:'no-cors'});
+            out.checks.https = true; out.checks.https_time = Math.round(performance.now()-t0);
+          }catch(e){ out.checks.https = false }
+
+          // Geo/IP for the domain (resolve via a public JSON IP resolver)
+          try{
+            // we try to resolve via a simple DNS-over-HTTPS trick using Cloudflare's 1.1.1.1
+            const dns = await fetch('https://cloudflare-dns.com/dns-query?name='+encodeURIComponent(target)+'&type=A',{headers:{accept:'application/dns-json'}});
+            if(dns.ok){ const jd = await dns.json(); out.dns = jd; }
+          }catch(e){ }
+        }
+
+      } else if(type==='username'){
+        // For usernames, do a simple web search link suggestion (no scraping)
+        out.hints = {
+          suggestion: `Try searching username on GitHub, Twitter, Instagram and public paste sites. Example searches: \"${target}\" site:github.com` }
+      }
+
+      // Heuristic risk scoring (simple)
+      out.score = heuristicScore(out);
+      out.summary = simpleSummary(out);
+      return out;
+    }
+
+    function heuristicScore(data){
+      // start at 50 (neutral). Positive means more risky.
+      let s = 50;
+      if(data.rdap){
+        // older domains tend to be safer: check registration events
+        try{
+          if(data.rdap.events){
+            const ev = data.rdap.events.find(e=>e.eventAction && /registration|registered/i.test(e.eventAction));
+            if(ev && ev.eventDate){ const year = new Date(ev.eventDate).getFullYear(); if(year<2018) s-=10; else s+=0 }
+          }
+        }catch(e){}
+      }
+      if(data.checks){
+        if(data.checks.https===false) s+=15; // no HTTPS
+        if(data.checks.rdap===false) s+=10; // missing RDAP
+      }
+      // clamp 0-100
+      s = Math.max(0, Math.min(100, s));
+      return s;
+    }
+
+    function simpleSummary(data){
+      const s = data.score;
+      if(s < 35) return {risk:'Low','class':'risk-low',text:'Low risk — looks normal based on available public information.'}
+      if(s < 65) return {risk:'Medium','class':'risk-med',text:'Medium risk — some indicators require caution.'}
+      return {risk:'High','class':'risk-high',text:'High risk — many indicators suggest caution.'}
+    }
+
+    function renderReport(d){
+      resultsEl.innerHTML = '';
+      const head = el('div','row');
+      head.appendChild(el('div','score',d.score));
+      const badge = el('div',null,`${simpleSummary(d).risk} risk`);
+      badge.className = 'pill '+simpleSummary(d).class;
+      head.appendChild(badge);
+      resultsEl.appendChild(head);
+
+      resultsEl.appendChild(el('div',null,'Summary:'));
+      resultsEl.appendChild(el('pre',null,simpleSummary(d).text));
+
+      if(d.rdap) {
+        resultsEl.appendChild(el('div',null,'RDAP / Registration info:'));
+        resultsEl.appendChild(el('pre',null,JSON.stringify(d.rdap || {}, null, 2)));
+      }
+
+      if(d.dns) {
+        resultsEl.appendChild(el('div',null,'DNS answer:'));
+        resultsEl.appendChild(el('pre',null,JSON.stringify(d.dns, null, 2)));
+      }
+
+      if(d.hints){ resultsEl.appendChild(el('div',null,'Hints:')); resultsEl.appendChild(el('pre',null,JSON.stringify(d.hints,null,2))) }
+      if(d._note) resultsEl.appendChild(el('div','muted',d._note));
+
+      resultsEl.appendChild(el('div',null,`Scanned at: ${new Date(d.when||Date.now()).toLocaleString()}`));
+    }
+
+    scanBtn.addEventListener('click', ()=>{ const t = targetInput.value.trim(); if(!t) return alert('Enter a target.'); doScan(t,typeSelect.value) });
+    targetInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') scanBtn.click() });
+
+    copyBtn.addEventListener('click', ()=>{ if(!lastReport) return alert('No report'); navigator.clipboard.writeText(JSON.stringify(lastReport,null,2)).then(()=>alert('Copied')) });
+    clearBtn.addEventListener('click', ()=>{ resultsEl.innerHTML=''; lastReport=null });
+
+    // Deep scan (Pro) — show modal which offers PayPal/Stripe
+    const proModal = document.getElementById('proModal');
+    const stripePay = document.getElementById('stripePay');
+    const paypalPay = document.getElementById('paypalPay');
+    const closePro = document.getElementById('closePro');
+
+    deepBtn.addEventListener('click', ()=>{ proModal.style.display='flex'; proModal.setAttribute('aria-hidden','false'); });
+    closePro.addEventListener('click', ()=>{ proModal.style.display='none'; proModal.setAttribute('aria-hidden','true'); });
+
+    stripePay.addEventListener('click', async ()=>{
+      const target = targetInput.value.trim();
+      if(!target) return alert('Enter a target to scan');
+      try{
+        const r = await fetch('/api/create-checkout-session',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({target})});
+        const j = await r.json();
+        if(j.url) window.location = j.url; else alert('Payment setup failed');
+      }catch(e){ alert('Payment failed: '+e.message) }
+    });
+
+    paypalPay.href = 'https://www.paypal.me/yourname/2';
+
+    // friendly demo default
+    targetInput.value = 'example.com';
+  </script>
+</body>
+</html>

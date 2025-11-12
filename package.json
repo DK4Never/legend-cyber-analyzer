@@ -1,0 +1,19 @@
+{
+  "name": "legend-cyber-analyzer",
+  "version": "1.0.0",
+  "description": "Legend Cyber Analyzer - Web Intelligence and Pro Scan System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "node-fetch": "^2.7.0",
+    "openai": "^4.0.0",
+    "sqlite3": "^5.1.7",
+    "stripe": "^14.25.0",
+    "whoiser": "^1.18.0"
+  }
+}
